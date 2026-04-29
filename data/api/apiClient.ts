@@ -1,6 +1,7 @@
 import {apiUrl} from "@/data/api/api";
 import axios, {AxiosInstance} from "axios";
 import Toast from "react-native-toast-message";
+import {AuthService} from "@/data/repositories/AuthService";
 
 export const apiClient: AxiosInstance = axios.create({
     baseURL: apiUrl,
@@ -11,7 +12,7 @@ export const apiClient: AxiosInstance = axios.create({
 
 apiClient.interceptors.request.use(
     (config) => {
-        const token = "" //AuthManager.getToken();
+        const token = AuthService.getToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
