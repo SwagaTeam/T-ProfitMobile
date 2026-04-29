@@ -5,7 +5,6 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    SafeAreaView,
     KeyboardAvoidingView,
     Platform
 } from 'react-native';
@@ -25,14 +24,14 @@ export function PhoneScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
                 <View style={styles.header}>
-                    <Text style={styles.title}>Введите телефон</Text>
-                    <Text style={styles.subtitle}>Чтобы войти или стать клиентом</Text>
+                    <Text style={styles.title}>Выберите профиль</Text>
+                    <Text style={styles.subtitle}>Изучите возможности приложения</Text>
                 </View>
 
                 <View style={styles.inputContainer}>
@@ -61,19 +60,19 @@ export function PhoneScreen() {
                     <Text style={styles.buttonText}>Продолжить</Text>
                 </TouchableOpacity>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#000000', // Полностью черный фон по макету
+        backgroundColor: '#000000',
     },
     container: {
         flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 40,
+        paddingHorizontal: 40,
+        paddingTop: 80,
     },
     header: {
         marginBottom: 32,
@@ -86,16 +85,16 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         color: '#8E8E93',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '400',
     },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1C1C1E', // Темно-серый фон поля ввода
+        backgroundColor: '#1C1C1E',
         borderRadius: 16,
         paddingHorizontal: 16,
-        height: 56,
+        height: 60,
         marginBottom: 24,
     },
     prefixContainer: {
@@ -119,8 +118,8 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     button: {
-        backgroundColor: '#FFDD2D', // Фирменный желтый Т-Банка
-        height: 56,
+        backgroundColor: '#FFDD2D',
+        height: 60,
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
@@ -131,6 +130,6 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#000000',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '500',
     },
 });

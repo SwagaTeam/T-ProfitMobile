@@ -31,7 +31,7 @@ export function PasswordScreen() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = async () => {
+    /* const handleLogin = async () => {
         if (!phone || !password) {
             Toast.show({
                 type: 'error',
@@ -44,17 +44,16 @@ export function PasswordScreen() {
         setIsLoading(true);
         try {
             const response = await apiClient.post<AuthResponse>('/api/Auth/login', {
-                email: phone, // Предполагаю, что бэкенд ждет телефон в это поле
+                email: phone,
                 password: password
             });
 
             const data = response.data;
 
-            // Используем AuthService вместо AuthManager
             await AuthService.setAuth(
                 data.token,
                 data.user.id,
-                30 // expiresInDays
+                data.user.role,
             );
 
             await AsyncStorage.setItem('userData', JSON.stringify(data));
@@ -71,7 +70,11 @@ export function PasswordScreen() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }; */
+
+    const handleLogin = () => {
+        router.replace('/(screens)/DashboardScreen');
+    }
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -121,7 +124,7 @@ export function PasswordScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#121212', // Более серый фон по сравнению с 1 экраном
+        backgroundColor: '#728d8d', // Более серый фон по сравнению с 1 экраном
     },
     container: {
         flex: 1,

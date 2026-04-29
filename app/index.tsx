@@ -10,7 +10,7 @@ function useProtectedRoute(isAuthenticated: boolean | null) {
     useEffect(() => {
         if (isAuthenticated === null) return;
         if (!isAuthenticated) {
-            router.replace('/(auth)/PhoneScreen');
+            router.replace('/(screens)/DashboardScreen');
         } else if (isAuthenticated) {
             router.replace('/(screens)/DashboardScreen');
         }

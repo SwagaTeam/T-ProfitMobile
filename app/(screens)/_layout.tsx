@@ -5,6 +5,7 @@ import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {AuthService} from "@/data/repositories/AuthService";
+import {LinearGradient} from "expo-linear-gradient";
 
 export default () => {
     const insets = useSafeAreaInsets();
@@ -14,122 +15,126 @@ export default () => {
         <>
             <Tabs
                 screenOptions={{
-        headerShown: false,
-            tabBarActiveTintColor: "#11631b",
-            tabBarInactiveTintColor: "#484f56",
-            tabBarShowLabel: false,
+                    headerShown: false,
+                    tabBarActiveTintColor: "#3f83d6",
+                    tabBarShowLabel: false,
 
-            tabBarStyle: {
-            bottom: insets.bottom,
-                left: 15,
-                right: 15,
-                elevation: 0,
-                backgroundColor: Platform.OS === 'ios' ? "transparent" : "rgba(255,255,255,0.8)",
-                borderRadius: 25,
-                borderTopWidth: 0,
-                overflow: 'hidden',
-                height: 60,
-                paddingBottom: 0,
-                marginHorizontal: 15,
-        },
+                    tabBarStyle: {
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        elevation: 0,
+                        backgroundColor: "transparent", // Прозрачный фон для эффекта стекла
+                        height: 70 + (Platform.OS === 'ios' ? insets.bottom : 0),
+                        paddingBottom: Platform.OS === 'ios' ? insets.bottom : 10,
+                        paddingTop: 10,
+                        borderTopWidth: 0,
+                    },
 
-        // Убираем ограничения контейнера иконки
-        tabBarIconStyle: {
-            width: '100%',
-                height: '100%',
-        },
+                    tabBarIconStyle: {
+                        width: '100%',
+                        height: '100%',
+                    },
 
-        // Центрируем элементы внутри таба
-        tabBarItemStyle: {
-            justifyContent: 'center',
-                alignItems: 'center',
-                paddingVertical: 10,
-        },
+                    tabBarItemStyle: {
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    },
 
-        tabBarBackground: () => (
-            <BlurView
-                intensity={60}
-        tint="light"
-        style={StyleSheet.absoluteFill}
-        />
-    ),
-    }}
->
-    <Tabs.Screen
-        name="DashboardScreen"
-    options={{
-        tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.fullTabWrapper, focused && styles.activeWrapper]}>
-        <House size={22} color={color}/>
-        <Text style={[styles.labelStyle, {color}]}>главная</Text>
-        </View>
-    ),
-    }}
-    />
+                    tabBarBackground: () => (
+                        <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+                            {/* Android: Полупрозрачный градиент (создаст иллюзию глубины) */}
+                            <LinearGradient
+                                colors={['rgba(25, 25, 35, 0.95)', 'rgba(15, 15, 25, 0.98)']}
+                                style={StyleSheet.absoluteFill}
+                            />
 
-    <Tabs.Screen
-    name="EventsScreen"
-    options={{
-        tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.fullTabWrapper, focused && styles.activeWrapper]}>
-        <Calendar size={22} color={color}/>
-        <Text style={[styles.labelStyle, {color}]}>события</Text>
-        </View>
-    ),
-    }}
-    />
+                            {/* iOS: Настоящий блюр поверх градиента */}
+                            <BlurView
+                                intensity={20}
+                                tint="dark"
+                                style={StyleSheet.absoluteFill}
+                            />
 
-    <Tabs.Screen
-    name="TaskBoardScreen"
-    options={{
-        tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.fullTabWrapper, focused && styles.activeWrapper]}>
-        <ListTodo size={22} color={color}/>
-        <Text style={[styles.labelStyle, {color}]}>задачи</Text>
-        </View>
-    ),
-    }}
-    />
+                            {/* Стеклянный ободок (гламур) */}
+                            <View
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 1,
+                                }}
+                            />
+                        </View>
+                    ),
+                }}
+            >
+                <Tabs.Screen
+                    name="DashboardScreen"
+                    options={{
+                        tabBarIcon: ({ color, focused }) => (
+                            <View style={styles.fullTabWrapper}>
+                                <House
+                                    size={20}
+                                    color={color}
+                                    strokeWidth={focused ? 2 : 1.8}
+                                />
+                                <Text style={[styles.labelStyle, {color}]}>Главная</Text>
+                            </View>
+                        ),
+                    }}
+                />
 
-    <Tabs.Screen
-    name="CatalogScreen"
-    options={{
-        tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.fullTabWrapper, focused && styles.activeWrapper]}>
-        <Folder size={22} color={color}/>
-        <Text style={[styles.labelStyle, {color}]}>каталог</Text>
-        </View>
-    ),
-    }}
-    />
-    {role === "Admin" ? (
-            <Tabs.Screen
-                name="UserListScreen"
-        options={{
-        tabBarIcon: ({ color, focused }) => (
-            <View style={[styles.fullTabWrapper, focused && styles.activeWrapper]}>
-        <User size={22} color={color}/>
-        <Text style={[styles.labelStyle, {color}]}>аккаунты</Text>
-        </View>
-    ),
-    }}
-        />
-    ) : (
-        <Tabs.Screen
-            name="UserListScreen"
-        options={{
-        href: null,
-    }}
-        />
-    )}
+                <Tabs.Screen
+                    name="OrbitScreen"
+                    options={{
+                        tabBarIcon: ({ color, focused }) => (
+                            <View style={styles.fullTabWrapper}>
+                                <Folder
+                                    size={20}
+                                    color={color}
+                                    strokeWidth={focused ? 2 : 1.8}
+                                />
+                                <Text style={[styles.labelStyle, {color}]}>Т-орбита</Text>
+                            </View>
+                        ),
+                    }}
+                />
 
-    <Tabs.Screen name="EventDetailsScreen" options={{ href: null }} />
-    <Tabs.Screen name="CreateEventScreen" options={{ href: null }} />
-    <Tabs.Screen name="TaskDetailScreen" options={{ href: null }} />
-    <Tabs.Screen name="ProfileScreen" options={{ href: null }} getId={({ params }) => params?.id} />
-    </Tabs>
-    </>
-);
+                {role === "Admin" ? (
+                    <Tabs.Screen
+                        name="UserListScreen"
+                        options={{
+                            tabBarIcon: ({ color, focused }) => (
+                                <View style={styles.fullTabWrapper}>
+                                    <User
+                                        size={20}
+                                        color={color}
+                                        strokeWidth={focused ? 2 : 1.8}
+                                    />
+                                    <Text style={[styles.labelStyle, {color}]}>Аккаунты</Text>
+                                </View>
+                            ),
+                        }}
+                    />
+                ) : (
+                    <Tabs.Screen
+                        name="UserListScreen"
+                        options={{
+                            href: null,
+                        }}
+                    />
+                )}
+
+                <Tabs.Screen name="EventDetailsScreen" options={{ href: null }} />
+                <Tabs.Screen name="CreateEventScreen" options={{ href: null }} />
+                <Tabs.Screen name="TaskDetailScreen" options={{ href: null }} />
+                <Tabs.Screen name="ProfileScreen" options={{ href: null }} getId={({ params }) => params?.id} />
+            </Tabs>
+        </>
+    );
 };
 
 const styles = StyleSheet.create({
@@ -137,16 +142,11 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: Platform.OS === 'ios' ? 17 : 0,
-        borderRadius: 18,
-    },
-    activeWrapper: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        gap: 4,
+        marginBottom: 10,
     },
     labelStyle: {
         fontSize: 10,
-        marginTop: 4,
-        fontWeight: '600',
+        fontWeight: '500',
     },
 });
