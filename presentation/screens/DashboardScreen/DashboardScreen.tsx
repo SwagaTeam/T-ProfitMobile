@@ -1,16 +1,26 @@
-import React from 'react';
-import { StyleSheet, ScrollView, View, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, ScrollView, View, Text, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as LucideIcons from 'lucide-react-native';
-import {DASHBOARD_DATA} from "@/data/Mock";
-import {router} from "expo-router";
-import {useSafeAreaInsets} from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FireButton } from '@/presentation/components/FireButton/FireButton';
 import { StreakData } from '@/domain/models/streak';
+import {useDashboardStore} from "@/data/useDashboardStore";
+import { AuthService } from '@/data/repositories/AuthService';
 
-export  function DashboardScreen() {
+
+export function DashboardScreen() {
     const insets = useSafeAreaInsets();
+    const id = AuthService.getUserId();
+    // Подключаем стор
+    const { data, isLoading, error, fetchDashboard } = useDashboardStore();
 
+    useEffect(() => {
+        fetchDashboard(id);
+    }, []);
+
+    // Оставляем мок для FIRE_STATE, так как его нет в ответе сервера
     const FIRE_STATE: StreakData = {
         currentStreak: 50,
         longestStreak: 50,
@@ -30,6 +40,30 @@ export  function DashboardScreen() {
         return `${h}ч ${String(m).padStart(2, '0')}м`;
     };
 
+    if (isLoading) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#4e81ff" />
+            </View>
+        );
+    }
+
+    if (error || !data) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: 'white' }}>{error || 'Данные не найдены'}</Text>
+            </View>
+        );
+    }
+
+    // Достаем имя (например, "Дмитрий" из "Иванов Дмитрий Иванович")
+    const firstName = data.userName ? data.userName.split(' ')[1] : 'Пользователь';
+
+    // Подсчет общей выгоды (для примера суммируем все балансы)
+    const totalAccumulated = (data.loyaltyAnalytics.totalRub || 0) +
+        (data.loyaltyAnalytics.totalMiles || 0) +
+        (data.loyaltyAnalytics.totalBravo || 0);
+
     return (
         <View style={[styles.container, {paddingTop: insets.top + 15, paddingBottom: insets.bottom + 15 }]}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -41,7 +75,7 @@ export  function DashboardScreen() {
                         </LinearGradient>
                         <View style={headerStyles.textContainer}>
                             <Text style={headerStyles.greeting}>Привет,</Text>
-                            <Text style={headerStyles.name}>Александр</Text>
+                            <Text style={headerStyles.name}>{firstName}</Text>
                         </View>
                     </TouchableOpacity>
                     <LinearGradient colors={['#2c2c2e', '#1c1c1e']} style={headerStyles.premiumBadge}>
@@ -51,21 +85,19 @@ export  function DashboardScreen() {
 
                 <Text style={styles.mainTitle}>Ваша выгода</Text>
 
+                {/* ==================== Fire Section (Mocked) ==================== */}
                 <View style={fireStyles.container}>
                     <View style={fireStyles.card}>
                         <View style={fireStyles.info}>
                             <View style={fireStyles.badge}>
                                 <Text style={fireStyles.badgeText}>Запал активен</Text>
                             </View>
-
                             <Text style={fireStyles.title}>{FIRE_STATE.currentStreak} дней подряд</Text>
-
                             <Text style={fireStyles.description}>
                                 Вы уже открыли +{FIRE_STATE.extraCashbackPercent}% к кэшбэку.
                                 Ещё {FIRE_STATE.hoursRemaining} дней — и будет доступ к закрытому клубу
                                 с повышенными ставками у партнёров.
                             </Text>
-
                             <View style={fireStyles.metaRow}>
                                 <View style={fireStyles.metaChip}>
                                     <LucideIcons.Clock3 color="#FFDD2D" size={14} />
@@ -73,14 +105,12 @@ export  function DashboardScreen() {
                                         {formatHoursLeft(FIRE_STATE.hoursRemaining)} до сброса
                                     </Text>
                                 </View>
-
                                 <View style={fireStyles.metaChip}>
                                     <LucideIcons.Percent color="#FFDD2D" size={14} />
                                     <Text style={fireStyles.metaText}>+1% ко всем категориям</Text>
                                 </View>
                             </View>
                         </View>
-
                         <View style={fireStyles.side}>
                             <FireButton
                                 streak={FIRE_STATE}
@@ -98,19 +128,19 @@ export  function DashboardScreen() {
                 <View style={cardStyles.container}>
                     <View style={cardStyles.blackCard}>
                         <Text style={cardStyles.label}>Всего накоплено</Text>
-                        <Text style={cardStyles.totalAmount}>15 450 ₽</Text>
+                        <Text style={cardStyles.totalAmount}>{totalAccumulated.toLocaleString('ru-RU')} ₽</Text>
 
                         <View style={cardStyles.row}>
                             <View>
-                                <Text style={cardStyles.subAmount}>5 000 ₽</Text>
+                                <Text style={cardStyles.subAmount}>{data.loyaltyAnalytics.totalRub} ₽</Text>
                                 <Text style={cardStyles.subLabel}>Black</Text>
                             </View>
                             <View>
-                                <Text style={cardStyles.subAmount}>8 000</Text>
+                                <Text style={cardStyles.subAmount}>{data.loyaltyAnalytics.totalMiles}</Text>
                                 <Text style={cardStyles.subLabel}>All Airlines</Text>
                             </View>
                             <View>
-                                <Text style={cardStyles.subAmount}>2 450</Text>
+                                <Text style={cardStyles.subAmount}>{data.loyaltyAnalytics.totalBravo}</Text>
                                 <Text style={cardStyles.subLabel}>Bravo</Text>
                             </View>
                         </View>
@@ -120,13 +150,13 @@ export  function DashboardScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* ИИ-карточка со светлым фоном */}
+                    {/* ИИ-карточка с реальным сообщением */}
                     <View style={cardStyles.aiCard}>
                         <View style={cardStyles.aiIconContainer}>
                             <LucideIcons.Sparkles color="#4e81ff" size={20} />
                         </View>
                         <Text style={cardStyles.aiText}>
-                            ИИ-Аналитик: <Text style={{fontWeight: '400', color: '#666'}}>В этом месяце вы можете сэкономить еще 2000 ₽...</Text>
+                            ИИ-Аналитик: <Text style={{fontWeight: '400', color: '#666'}}>{data.aiMessage}</Text>
                         </Text>
                         <TouchableOpacity style={cardStyles.aiBtn}>
                             <Text style={cardStyles.aiBtnText}>Применить</Text>
@@ -141,17 +171,17 @@ export  function DashboardScreen() {
                         <View style={activeStyles.programCard}>
                             <LucideIcons.TrendingUp color="#4e81ff" size={24} />
                             <Text style={activeStyles.programName}>Кешбэк</Text>
-                            <Text style={activeStyles.programValue}>2 340 ₽</Text>
+                            <Text style={activeStyles.programValue}>{data.loyaltyAnalytics.totalRub} ₽</Text>
                         </View>
                         <View style={activeStyles.programCard}>
                             <LucideIcons.Users color="#4e81ff" size={24} />
                             <Text style={activeStyles.programName}>Рефералы</Text>
-                            <Text style={activeStyles.programValue}>1 200 ₽</Text>
+                            <Text style={activeStyles.programValue}>{data.loyaltyAnalytics.totalReferal || 0} ₽</Text>
                         </View>
                         <View style={activeStyles.programCard}>
                             <LucideIcons.Ticket color="#4e81ff" size={24} />
                             <Text style={activeStyles.programName}>Акции</Text>
-                            <Text style={activeStyles.programValue}>890 ₽</Text>
+                            <Text style={activeStyles.programValue}>0 ₽</Text>
                         </View>
                     </ScrollView>
                 </View>
@@ -171,23 +201,27 @@ export  function DashboardScreen() {
 
                     <Text style={partnerStyles.sectionTitle}>Акции партнеров</Text>
                     <View style={partnerStyles.grid}>
-                        {DASHBOARD_DATA.partners.map((p, i) => {
-                            const Icon = LucideIcons[p.icon as keyof typeof LucideIcons];
-                            return (
-                                <View key={i} style={partnerStyles.partnerCard}>
-                                    <View style={partnerStyles.partnerHeader}>
-                                        <LinearGradient colors={['#f8f9fa', '#e9ecef']} style={partnerStyles.partnerIconBox}>
-                                            {/* @ts-ignore */}
-                                            <Icon size={24} color="#4e81ff" strokeWidth={1.5} />
-                                        </LinearGradient>
-                                        <View style={partnerStyles.cashbackBadge}>
-                                            <Text style={partnerStyles.cashbackText}>{p.cashback}</Text>
-                                        </View>
+                        {data.partners.map((p, i) => (
+                            <View key={i} style={partnerStyles.partnerCard}>
+                                <View style={partnerStyles.partnerHeader}>
+                                    {/* Здесь мы используем URL картинки вместо Lucide-иконок */}
+                                    <View style={[partnerStyles.partnerIconBox, { backgroundColor: p.color + '20' }]}>
+                                        <Image
+                                            source={{ uri: p.logoUrl }}
+                                            style={{ width: 26, height: 26, borderRadius: 8 }}
+                                            resizeMode="cover"
+                                        />
                                     </View>
-                                    <Text style={partnerStyles.partnerName}>{p.name}</Text>
+                                    <View style={partnerStyles.cashbackBadge}>
+                                        <Text style={partnerStyles.cashbackText}>{p.cashbackPercent}%</Text>
+                                    </View>
                                 </View>
-                            );
-                        })}
+                                <Text style={partnerStyles.partnerName}>{p.name}</Text>
+                                <Text style={{ color: '#8E8E93', fontSize: 12, marginTop: 4 }}>
+                                    {p.shortDescription}
+                                </Text>
+                            </View>
+                        ))}
                     </View>
                 </View>
             </ScrollView>
@@ -199,16 +233,9 @@ export  function DashboardScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#000000' },
     scrollContent: { paddingBottom: 40 },
-    mainTitle: {
-        fontSize: 34,
-        fontWeight: '700',
-        color: '#fff',
-        paddingHorizontal: 20,
-        marginBottom: 20,
-    }
+    mainTitle: { fontSize: 34, fontWeight: '700', color: '#fff', paddingHorizontal: 20, marginBottom: 20 }
 });
 
-// Header Styles
 const headerStyles = StyleSheet.create({
     container: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
     profileRow: { flexDirection: 'row', alignItems: 'center' },
@@ -220,7 +247,6 @@ const headerStyles = StyleSheet.create({
     premiumText: { fontSize: 12, fontWeight: '700', color: '#fff' }
 });
 
-// SavingsCard Styles
 const cardStyles = StyleSheet.create({
     container: { paddingHorizontal: 20 },
     blackCard: { backgroundColor: '#191919', borderRadius: 24, padding: 24 },
@@ -231,15 +257,13 @@ const cardStyles = StyleSheet.create({
     subLabel: { color: '#8E8E93', fontSize: 12 },
     button: { backgroundColor: '#FFDD2D', height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
     buttonText: { fontWeight: '600', fontSize: 15 },
-    // Светлая карточка ИИ
-    aiCard: { backgroundColor: '#e3e3e3', borderRadius: 24, padding: 20, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+    aiCard: { backgroundColor: '#e3e3e3', borderRadius: 24, padding: 20, marginTop: 16 },
     aiIconContainer: { width: 36, height: 36, backgroundColor: '#f0f0f0', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
     aiText: { fontSize: 14, fontWeight: '700', lineHeight: 20, marginBottom: 12, color: '#404040' },
     aiBtn: { backgroundColor: '#f8f9fa', alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#e0e0e0' },
     aiBtnText: { fontSize: 13, fontWeight: '600', color: '#4e81ff' }
 });
 
-// ActivePrograms Styles
 const activeStyles = StyleSheet.create({
     container: { paddingHorizontal: 20, marginBottom: 24, marginTop: 8 },
     title: { fontSize: 20, fontWeight: '700', marginBottom: 16, color: '#fff' },
@@ -248,7 +272,6 @@ const activeStyles = StyleSheet.create({
     programValue: { fontSize: 18, fontWeight: '700', color: '#fff', marginTop: 4 }
 });
 
-// PartnerSection Styles
 const partnerStyles = StyleSheet.create({
     container: { padding: 20 },
     achievementsCard: { backgroundColor: '#1c1c1e', borderRadius: 24, padding: 20, marginBottom: 24 },
@@ -268,81 +291,16 @@ const partnerStyles = StyleSheet.create({
 });
 
 const fireStyles = StyleSheet.create({
-    container: {
-        paddingHorizontal: 20,
-        marginBottom: 22,
-    },
-    card: {
-        borderRadius: 26,
-        paddingHorizontal: 20,
-        paddingVertical: 24,
-        backgroundColor: '#191919',
-        borderWidth: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        overflow: 'hidden',
-    },
-    info: {
-        flex: 1,
-        paddingRight: 16,
-    },
-    badge: {
-        alignSelf: 'flex-start',
-        backgroundColor: 'rgba(255,221,45,0.12)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,221,45,0.18)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 999,
-        marginBottom: 12,
-    },
-    badgeText: {
-        color: '#FFDD2D',
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        marginBottom: 8,
-    },
-    description: {
-        fontSize: 14,
-        lineHeight: 20,
-        color: '#A1A1AA',
-        marginBottom: 14,
-        maxWidth: '96%',
-    },
-    metaRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    metaChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        borderRadius: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        marginRight: 8,
-        marginBottom: 8,
-    },
-    metaText: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: '600',
-        marginLeft: 6,
-    },
-    side: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    ctaText: {
-        marginTop: 14,
-        color: '#8E8E93',
-        fontSize: 12,
-        fontWeight: '600',
-    },
+    container: { paddingHorizontal: 20, marginBottom: 22 },
+    card: { borderRadius: 26, paddingHorizontal: 20, paddingVertical: 24, backgroundColor: '#191919', borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' },
+    info: { flex: 1, paddingRight: 16 },
+    badge: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,221,45,0.12)', borderWidth: 1, borderColor: 'rgba(255,221,45,0.18)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, marginBottom: 12 },
+    badgeText: { color: '#FFDD2D', fontSize: 12, fontWeight: '700' },
+    title: { fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
+    description: { fontSize: 14, lineHeight: 20, color: '#A1A1AA', marginBottom: 14, maxWidth: '96%' },
+    metaRow: { flexDirection: 'row', flexWrap: 'wrap' },
+    metaChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginRight: 8, marginBottom: 8 },
+    metaText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600', marginLeft: 6 },
+    side: { alignItems: 'center', justifyContent: 'center' },
+    ctaText: { marginTop: 14, color: '#8E8E93', fontSize: 12, fontWeight: '600' },
 });

@@ -10,40 +10,50 @@ import {
     Platform,
     StatusBar
 } from 'react-native';
-import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 // @ts-ignore
 import * as THREE from 'three';
-import { X, ChevronRight, Sparkles, TrendingUp, Award } from 'lucide-react-native';
+import { X, ChevronRight, TrendingUp } from 'lucide-react-native';
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import { useTexture } from '@react-three/drei/native';
 
 const { width, height } = Dimensions.get('window');
-
+interface PlanetMaterialProps {
+    data: {
+        textureMap: string;
+        normalMap?: string;
+        color?: string;
+        emissive?: string;
+    };
+    isActive: boolean;
+}
 // --- 1. ДАННЫЕ ПРОДУКТОВ ---
 const PLANETS_DATA = [
     {
         id: 'black',
         name: 'T-Black',
         color: '#ffffff',
-        emissive: '#3A3A3A',
-        distance: 2.2,
-        speed: 0.15,
+        emissive: '#000000',
+        distance: 2.5,
+        speed: 0.12, // Единая скорость
+        startAngle: 0,
         size: 0.72,
         balance: '45 287 ₽',
         sub: 'Кэшбэк 5% • Премиум',
         usage: 94,
         monthlyGrowth: '+2 340 ₽',
         category: 'Дебетовая карта',
-        textureMap: require('@/assets/textures/earth.jpg'),
+        textureMap: require('@/assets/textures/ceres.jpg'),
         normalMap: null,
     },
     {
         id: 'invest',
         name: 'Инвестиции',
         color: '#ffffff',
-        emissive: '#2A4D7C',
+        emissive: '#000000',
         distance: 3.2,
-        speed: 0.12,
+        speed: 0.12, // Единая скорость
+        startAngle: 2.09,
         size: 0.88,
         balance: '487 920 ₽',
         sub: '+12.3% за год',
@@ -57,9 +67,10 @@ const PLANETS_DATA = [
         id: 'premium',
         name: 'Premium',
         color: '#ffffff',
-        emissive: '#4A3970',
-        distance: 4.0,
-        speed: 0.09,
+        emissive: '#000000',
+        distance: 4,
+        speed: 0.12, // Единая скорость
+        startAngle: 4.18,
         size: 0.78,
         balance: '1 250 000 ₽',
         sub: 'VIP обслуживание',
@@ -76,13 +87,9 @@ const DAILY_REWARDS = [
     { id: 2, angle: 135, radius: 3.5, value: 200 },
     { id: 3, angle: 225, radius: 2.5, value: 125 },
 ];
-
-// --- 2. 3D КОМПОНЕНТЫ ---
-
-const PlanetMaterial = ({ data, isActive }: any) => {
+const PlanetMaterial = ({ data, isActive }: PlanetMaterialProps) => {
     const materialRef = useRef<THREE.MeshStandardMaterial>(null!);
     const texture = useTexture(data.textureMap);
-    const normalMap = data.normalMap ? useTexture(data.normalMap) : null;
 
     useFrame((state) => {
         if (materialRef.current) {
@@ -96,16 +103,12 @@ const PlanetMaterial = ({ data, isActive }: any) => {
             texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
             texture.anisotropy = 16;
         }
-        if (normalMap) {
-            normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-        }
-    }, [texture, normalMap]);
+    }, [texture]);
 
     return (
         <meshStandardMaterial
             ref={materialRef}
             map={texture}
-            normalMap={normalMap}
             color={data.color}
             emissive={data.emissive}
             emissiveIntensity={0.15}
@@ -120,12 +123,9 @@ const Planet = ({ data, onSelect, isSelected, isSystemPaused }: any) => {
     const meshRef = useRef<THREE.Mesh>(null!);
     const ringRef = useRef<THREE.Mesh>(null!);
     const [hovered, setHovered] = useState(false);
-
-    // Накапливаем угол вручную, чтобы избежать скачков при снятии с паузы
-    const currentAngle = useRef(0);
+    const currentAngle = useRef(data.startAngle || 0);
 
     useFrame((state, delta) => {
-        // Двигаем по орбите только если система не на паузе
         if (!isSystemPaused) {
             currentAngle.current += delta * data.speed;
         }
@@ -137,20 +137,14 @@ const Planet = ({ data, onSelect, isSelected, isSystemPaused }: any) => {
         }
 
         if (meshRef.current) {
-            // Сама планета продолжает вращаться всегда
-            const rotationSpeed = isSelected ? 0.008 : 0.003;
+            const rotationSpeed = 0.003;
             meshRef.current.rotation.y += rotationSpeed;
 
-            const targetScale = (hovered || isSelected) ? 1.15 : 1;
+            const targetScale = 1;
             meshRef.current.scale.lerp(
                 new THREE.Vector3(targetScale, targetScale, targetScale),
                 0.05
             );
-        }
-
-        if (ringRef.current && isSelected) {
-            const pulse = Math.sin(state.clock.getElapsedTime() * 2) * 0.1 + 0.9;
-            ringRef.current.scale.setScalar(pulse);
         }
     });
 
@@ -174,10 +168,8 @@ const Planet = ({ data, onSelect, isSelected, isSystemPaused }: any) => {
 
             {isSelected && (
                 <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]}>
-                    <ringGeometry args={[data.size * 1.3, data.size * 1.35, 64]} />
                     <meshBasicMaterial
                         color="#FFFFFF"
-                        transparent
                         opacity={0.3}
                         blending={THREE.AdditiveBlending}
                     />
@@ -208,70 +200,64 @@ const FallbackMaterial = ({ color, emissive }: any) => (
     />
 );
 
-const MinimalOrbits = ({ selectedPlanet }: any) => {
-    return (
-        <>
-            {PLANETS_DATA.map((p, i) => (
-                <mesh key={i} rotation={[-Math.PI / 2, 0, 0]}>
-                    <ringGeometry args={[p.distance - 0.005, p.distance + 0.005, 128]} />
-                    <meshBasicMaterial
-                        color="#FFFFFF"
-                        side={THREE.DoubleSide}
-                        transparent
-                        opacity={selectedPlanet ? 0.03 : 0.09} // Затемняем орбиты при выборе
-                    />
-                </mesh>
-            ))}
-        </>
-    );
-};
-
-const CentralHub = ({ selectedPlanet }: any) => {
+const CentralHub = ({ selectedPlanet }) => {
     const hubRef = useRef<THREE.Mesh>(null!);
-    const glowRef = useRef<THREE.Mesh>(null!);
+    const sunTexture = useTexture(require('@/assets/textures/sun.jpg'));
 
     useFrame((state) => {
-        if (hubRef.current) {
-            hubRef.current.rotation.y += 0.002;
-        }
+        const t = state.clock.getElapsedTime();
 
-        if (glowRef.current) {
-            const pulse = Math.sin(state.clock.getElapsedTime() * 0.8) * 0.05 + 0.95;
-            glowRef.current.scale.setScalar(pulse);
+        if (hubRef.current) {
+            // Солнце вращается медленно
+            hubRef.current.rotation.y += 0.005;
+            // Легкое покачивание для живости
+            hubRef.current.position.y = Math.sin(t * 0.5) * 0.05;
         }
     });
 
+    // @ts-ignore
     return (
         <group>
+            {/* Ядро солнца */}
             <mesh ref={hubRef}>
-                <sphereGeometry args={[0.4, 64, 64]} />
+                <sphereGeometry args={[1, 64, 64]} />
                 <meshStandardMaterial
-                    color={"#7070d5"}
-                    emissive={"#b5b5b5"}
-                    emissiveIntensity={selectedPlanet ? 0.1 : 0.3} // Затемняем при выборе
-                    metalness={1}
-                    roughness={0.1}
+                    map={sunTexture}
+                    emissiveMap={sunTexture}
+                    emissive={"#ffcc00"}
+                    emissiveIntensity={selectedPlanet ? 2 : 5} //
+                    color="#ffffff"
+                    roughness={1}
+                    metalness={0}
                 />
             </mesh>
-
-            <mesh ref={glowRef}>
-                <sphereGeometry args={[1, 32, 32]} />
-                <meshBasicMaterial
-                    color="#FFFFFF"
-                    transparent
-                    opacity={selectedPlanet ? 0.01 : 0.03}
-                    blending={THREE.AdditiveBlending}
-                />
-            </mesh>
-
-            <pointLight color="#FFFFFF" intensity={selectedPlanet ? 2 : 5} distance={12} decay={2} />
+            {/* Основной источник света от солнца */}
+            <pointLight
+                color="#ffddaa"
+                intensity={selectedPlanet ? 15 : 30} // Увеличили яркость
+                distance={20}
+                decay={1.5}
+            />
         </group>
+    );
+};
+
+const SpaceBackground = () => {
+    const starTexture = useTexture(require('@/assets/textures/stars.jpg'));
+
+    return (
+        <mesh scale={[-1, 1, 1]}>
+            <sphereGeometry args={[50, 64, 64]} />
+            <meshBasicMaterial
+                map={starTexture}
+                side={THREE.BackSide}
+            />
+        </mesh>
     );
 };
 
 const RewardParticle = ({ data, collected, onCollect, selectedPlanet }: any) => {
     const ref = useRef<THREE.Mesh>(null!);
-    const [hovered, setHovered] = useState(false);
 
     useFrame((state) => {
         if (ref.current && !collected) {
@@ -281,19 +267,17 @@ const RewardParticle = ({ data, collected, onCollect, selectedPlanet }: any) => 
             ref.current.position.y = Math.sin(state.clock.getElapsedTime() + data.id) * 0.1;
             ref.current.rotation.y += 0.01;
 
-            const scale = hovered ? 1.3 : 1;
+            const scale = 3;
             ref.current.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.1);
         }
     });
 
-    if (collected || selectedPlanet) return null; // Скрываем награды при выборе планеты
+    if (collected || selectedPlanet) return null;
 
     return (
         <mesh
             ref={ref}
             onClick={onCollect}
-            onPointerOver={() => setHovered(true)}
-            onPointerOut={() => setHovered(false)}
         >
             <octahedronGeometry args={[0.06, 0]} />
             <meshStandardMaterial
@@ -310,16 +294,6 @@ const RewardParticle = ({ data, collected, onCollect, selectedPlanet }: any) => 
 const SubtleStarField = ({ selectedPlanet }: any) => {
     const starsRef = useRef<THREE.Points>(null!);
 
-    const starPositions = React.useMemo(() => {
-        const positions = new Float32Array(1000 * 3);
-        for (let i = 0; i < 1000; i++) {
-            positions[i * 3] = (Math.random() - 0.5) * 50;
-            positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
-            positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
-        }
-        return positions;
-    }, []);
-
     useFrame(() => {
         if (starsRef.current) {
             starsRef.current.rotation.y += 0.00005;
@@ -328,20 +302,10 @@ const SubtleStarField = ({ selectedPlanet }: any) => {
 
     return (
         <points ref={starsRef}>
-            <bufferGeometry>
-                <bufferAttribute
-                    attach="attributes-position"
-                    count={starPositions.length / 3}
-                    array={starPositions}
-                    itemSize={3}
-                />
-            </bufferGeometry>
             <pointsMaterial
                 size={0.02}
                 color="#FFFFFF"
-                transparent
-                opacity={selectedPlanet ? 0.1 : 0.3} // Затемняем звезды
-                sizeAttenuation
+                opacity={selectedPlanet ? 0.1 : 0.3}
             />
         </points>
     );
@@ -468,7 +432,7 @@ export function OrbitScreen() {
 
             {/* 3D СЦЕНА */}
             <Canvas
-                camera={{ position: [0, 4.5, 6.5], fov: 80 }}
+                camera={{ position: [0, 0, 0], fov: 100 }}
                 style={{ flex: 1 }}
                 gl={{
                     antialias: true,
@@ -484,9 +448,9 @@ export function OrbitScreen() {
                 <directionalLight position={[5, 5, 5]} intensity={selectedPlanet ? 0.8 : 0.5} />
 
                 <Suspense fallback={null}>
+                    <SpaceBackground />
                     <CameraController selectedPlanet={selectedPlanet} />
                     <SubtleStarField selectedPlanet={selectedPlanet} />
-                    <MinimalOrbits selectedPlanet={selectedPlanet} />
                     <CentralHub selectedPlanet={selectedPlanet} />
 
                     {PLANETS_DATA.map(planet => (
