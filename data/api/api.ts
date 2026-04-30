@@ -1,1 +1,1 @@
-export const apiUrl = "https://project-domain.ru/api/";
+export const apiUrl = "https://www.project-domain.ru/api";

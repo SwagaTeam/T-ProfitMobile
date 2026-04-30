@@ -279,11 +279,6 @@ export const FireButton: React.FC<FireButtonProps> = ({
         }).start();
     };
 
-    const glowColor = glowAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [colors.glow, colors.glowStrong],
-    });
-
     const formatTimer = (hours: number) => {
         const h = Math.floor(hours);
         const m = Math.floor((hours - h) * 60);

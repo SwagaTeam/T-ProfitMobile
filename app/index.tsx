@@ -13,7 +13,7 @@ function useProtectedRoute(isAuthenticated: boolean | null) {
         if (isAuthenticated === null) return;
 
         if (!isAuthenticated) {
-            router.replace('/(screens)/DashboardScreen');
+            router.replace('/AuthScreen');
         } else if (isAuthenticated) {
             router.replace('/(screens)/DashboardScreen');
         }

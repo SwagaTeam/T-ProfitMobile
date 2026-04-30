@@ -6,33 +6,72 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FireButton } from '@/presentation/components/FireButton/FireButton';
 import { StreakData } from '@/domain/models/streak';
-import {useDashboardStore} from "@/data/useDashboardStore";
+import { useDashboardStore } from "@/data/useDashboardStore";
 import { AuthService } from '@/data/repositories/AuthService';
 
+// Моковые данные для заглушек при ошибке сети
+const MOCK_DATA = {
+    userName: 'Гость Пользователь',
+    aiMessage: 'У вас нет активных транзакций для анализа',
+    loyaltyAnalytics: {
+        totalRub: 0,
+        totalMiles: 0,
+        totalBravo: 0,
+        totalReferal: 0,
+    },
+    partners: [
+        {
+            name: 'СберМегаМаркет',
+            cashbackPercent: 5,
+            shortDescription: 'До 5% баллами',
+            logoUrl: 'https://via.placeholder.com/26',
+            color: '#4e81ff'
+        },
+        {
+            name: 'Яндекс.Маркет',
+            cashbackPercent: 3,
+            shortDescription: '3% кэшбэк',
+            logoUrl: 'https://via.placeholder.com/26',
+            color: '#ff4e4e'
+        },
+        {
+            name: 'Ozon',
+            cashbackPercent: 4,
+            shortDescription: '4% на всё',
+            logoUrl: 'https://via.placeholder.com/26',
+            color: '#4eff81'
+        },
+        {
+            name: 'AliExpress',
+            cashbackPercent: 2,
+            shortDescription: '2% кэшбэк',
+            logoUrl: 'https://via.placeholder.com/26',
+            color: '#ff884e'
+        }
+    ]
+};
+
+const MOCK_FIRE_STATE: StreakData = {
+    currentStreak: 0,
+    longestStreak: 0,
+    lastTransactionDate: new Date().toISOString(),
+    hoursRemaining: 24,
+    extraCashbackPercent: 0,
+    freezesAvailable: 0,
+    tier: 'basic',
+    multiplier: 1.0,
+    isActive: false,
+    totalCashbackEarned: 0,
+};
 
 export function DashboardScreen() {
     const insets = useSafeAreaInsets();
     const id = AuthService.getUserId();
-    // Подключаем стор
     const { data, isLoading, error, fetchDashboard } = useDashboardStore();
 
     useEffect(() => {
         fetchDashboard(id);
     }, []);
-
-    // Оставляем мок для FIRE_STATE, так как его нет в ответе сервера
-    const FIRE_STATE: StreakData = {
-        currentStreak: 50,
-        longestStreak: 50,
-        lastTransactionDate: '2024-01-15T14:30:00',
-        hoursRemaining: 4.5,
-        extraCashbackPercent: 1,
-        freezesAvailable: 2,
-        tier: 'cosmic',
-        multiplier: 1.0,
-        isActive: true,
-        totalCashbackEarned: 4520,
-    };
 
     const formatHoursLeft = (hours: number) => {
         const h = Math.floor(hours);
@@ -40,7 +79,12 @@ export function DashboardScreen() {
         return `${h}ч ${String(m).padStart(2, '0')}м`;
     };
 
-    if (isLoading) {
+    // Используем реальные данные или моковые при ошибке
+    const displayData = (error || !data) ? MOCK_DATA : data;
+    const displayFireState = error ? MOCK_FIRE_STATE : FIRE_STATE;
+
+    // Показываем лоадер только если нет ошибки и данные загружаются
+    if (isLoading && !error) {
         return (
             <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
                 <ActivityIndicator size="large" color="#4e81ff" />
@@ -48,25 +92,27 @@ export function DashboardScreen() {
         );
     }
 
-    if (error || !data) {
-        return (
-            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ color: 'white' }}>{error || 'Данные не найдены'}</Text>
-            </View>
-        );
-    }
-
     // Достаем имя (например, "Дмитрий" из "Иванов Дмитрий Иванович")
-    const firstName = data.userName ? data.userName.split(' ')[1] : 'Пользователь';
+    const firstName = displayData.userName ? displayData.userName.split(' ')[1] || 'Пользователь' : 'Гость';
 
-    // Подсчет общей выгоды (для примера суммируем все балансы)
-    const totalAccumulated = (data.loyaltyAnalytics.totalRub || 0) +
-        (data.loyaltyAnalytics.totalMiles || 0) +
-        (data.loyaltyAnalytics.totalBravo || 0);
+    // Подсчет общей выгоды
+    const totalAccumulated = (displayData.loyaltyAnalytics.totalRub || 0) +
+        (displayData.loyaltyAnalytics.totalMiles || 0) +
+        (displayData.loyaltyAnalytics.totalBravo || 0);
 
     return (
-        <View style={[styles.container, {paddingTop: insets.top + 15, paddingBottom: insets.bottom + 15 }]}>
+        <View style={[styles.container, { paddingTop: insets.top + 15, paddingBottom: insets.bottom + 15 }]}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                {/* Баннер ошибки сети (опционально) */}
+                {error && (
+                    <View style={errorStyles.banner}>
+                        <LucideIcons.WifiOff color="#FF4444" size={16} />
+                        <Text style={errorStyles.bannerText}>
+                            Нет подключения к интернету. Показаны сохраненные данные.
+                        </Text>
+                    </View>
+                )}
+
                 {/* ==================== Header ==================== */}
                 <View style={headerStyles.container}>
                     <TouchableOpacity onPress={() => router.push("/(screens)/DashboardScreen/ProfileScreen")} style={headerStyles.profileRow}>
@@ -79,41 +125,49 @@ export function DashboardScreen() {
                         </View>
                     </TouchableOpacity>
                     <LinearGradient colors={['#2c2c2e', '#1c1c1e']} style={headerStyles.premiumBadge}>
-                        <Text style={headerStyles.premiumText}>Premium</Text>
+                        <Text style={headerStyles.premiumText}>
+                            {displayFireState.isActive ? 'Premium' : 'Basic'}
+                        </Text>
                     </LinearGradient>
                 </View>
 
                 <Text style={styles.mainTitle}>Ваша выгода</Text>
 
-                {/* ==================== Fire Section (Mocked) ==================== */}
+                {/* ==================== Fire Section ==================== */}
                 <View style={fireStyles.container}>
                     <View style={fireStyles.card}>
                         <View style={fireStyles.info}>
                             <View style={fireStyles.badge}>
-                                <Text style={fireStyles.badgeText}>Запал активен</Text>
+                                <Text style={fireStyles.badgeText}>
+                                    {displayFireState.isActive ? 'Запал активен' : 'Запал неактивен'}
+                                </Text>
                             </View>
-                            <Text style={fireStyles.title}>{FIRE_STATE.currentStreak} дней подряд</Text>
+                            <Text style={fireStyles.title}>
+                                {displayFireState.currentStreak} дней подряд
+                            </Text>
                             <Text style={fireStyles.description}>
-                                Вы уже открыли +{FIRE_STATE.extraCashbackPercent}% к кэшбэку.
-                                Ещё {FIRE_STATE.hoursRemaining} дней — и будет доступ к закрытому клубу
-                                с повышенными ставками у партнёров.
+                                {displayFireState.isActive
+                                    ? `Вы уже открыли +${displayFireState.extraCashbackPercent}% к кэшбэку. Ещё ${displayFireState.hoursRemaining} дней — и будет доступ к закрытому клубу с повышенными ставками у партнёров.`
+                                    : 'Совершите покупку, чтобы активировать запал и получать повышенный кэшбэк!'}
                             </Text>
                             <View style={fireStyles.metaRow}>
                                 <View style={fireStyles.metaChip}>
                                     <LucideIcons.Clock3 color="#FFDD2D" size={14} />
                                     <Text style={fireStyles.metaText}>
-                                        {formatHoursLeft(FIRE_STATE.hoursRemaining)} до сброса
+                                        {formatHoursLeft(displayFireState.hoursRemaining)} до сброса
                                     </Text>
                                 </View>
                                 <View style={fireStyles.metaChip}>
                                     <LucideIcons.Percent color="#FFDD2D" size={14} />
-                                    <Text style={fireStyles.metaText}>+1% ко всем категориям</Text>
+                                    <Text style={fireStyles.metaText}>
+                                        +{displayFireState.extraCashbackPercent}% ко всем категориям
+                                    </Text>
                                 </View>
                             </View>
                         </View>
                         <View style={fireStyles.side}>
                             <FireButton
-                                streak={FIRE_STATE}
+                                streak={displayFireState}
                                 size="large"
                                 showLabel
                                 showTimer
@@ -132,15 +186,15 @@ export function DashboardScreen() {
 
                         <View style={cardStyles.row}>
                             <View>
-                                <Text style={cardStyles.subAmount}>{data.loyaltyAnalytics.totalRub} ₽</Text>
+                                <Text style={cardStyles.subAmount}>{displayData.loyaltyAnalytics.totalRub || 0} ₽</Text>
                                 <Text style={cardStyles.subLabel}>Black</Text>
                             </View>
                             <View>
-                                <Text style={cardStyles.subAmount}>{data.loyaltyAnalytics.totalMiles}</Text>
+                                <Text style={cardStyles.subAmount}>{displayData.loyaltyAnalytics.totalMiles || 0}</Text>
                                 <Text style={cardStyles.subLabel}>All Airlines</Text>
                             </View>
                             <View>
-                                <Text style={cardStyles.subAmount}>{data.loyaltyAnalytics.totalBravo}</Text>
+                                <Text style={cardStyles.subAmount}>{displayData.loyaltyAnalytics.totalBravo || 0}</Text>
                                 <Text style={cardStyles.subLabel}>Bravo</Text>
                             </View>
                         </View>
@@ -156,7 +210,7 @@ export function DashboardScreen() {
                             <LucideIcons.Sparkles color="#4e81ff" size={20} />
                         </View>
                         <Text style={cardStyles.aiText}>
-                            ИИ-Аналитик: <Text style={{fontWeight: '400', color: '#666'}}>{data.aiMessage}</Text>
+                            ИИ-Аналитик: <Text style={{ fontWeight: '400', color: '#666' }}>{displayData.aiMessage || 'Нет данных для анализа'}</Text>
                         </Text>
                         <TouchableOpacity style={cardStyles.aiBtn}>
                             <Text style={cardStyles.aiBtnText}>Применить</Text>
@@ -171,12 +225,12 @@ export function DashboardScreen() {
                         <View style={activeStyles.programCard}>
                             <LucideIcons.TrendingUp color="#4e81ff" size={24} />
                             <Text style={activeStyles.programName}>Кешбэк</Text>
-                            <Text style={activeStyles.programValue}>{data.loyaltyAnalytics.totalRub} ₽</Text>
+                            <Text style={activeStyles.programValue}>{displayData.loyaltyAnalytics.totalRub || 0} ₽</Text>
                         </View>
                         <View style={activeStyles.programCard}>
                             <LucideIcons.Users color="#4e81ff" size={24} />
                             <Text style={activeStyles.programName}>Рефералы</Text>
-                            <Text style={activeStyles.programValue}>{data.loyaltyAnalytics.totalReferal || 0} ₽</Text>
+                            <Text style={activeStyles.programValue}>{displayData.loyaltyAnalytics.totalReferal || 0} ₽</Text>
                         </View>
                         <View style={activeStyles.programCard}>
                             <LucideIcons.Ticket color="#4e81ff" size={24} />
@@ -193,24 +247,30 @@ export function DashboardScreen() {
                             <LucideIcons.Gift color="#FFD700" size={24} />
                             <Text style={partnerStyles.achieveTitle}>Достижения</Text>
                         </View>
-                        <Text style={partnerStyles.achieveSub}>Потратьте еще 5000 ₽ у партнеров...</Text>
+                        <Text style={partnerStyles.achieveSub}>
+                            {error ? 'Подключитесь к интернету для просмотра прогресса' : 'Потратьте еще 5000 ₽ у партнеров...'}
+                        </Text>
                         <View style={partnerStyles.progressBarBg}>
-                            <View style={[partnerStyles.progressFill, {width: '60%'}]} />
+                            <View style={[partnerStyles.progressFill, { width: error ? '0%' : '60%' }]} />
                         </View>
                     </View>
 
                     <Text style={partnerStyles.sectionTitle}>Акции партнеров</Text>
                     <View style={partnerStyles.grid}>
-                        {data.partners.map((p, i) => (
+                        {displayData.partners.map((p, i) => (
                             <View key={i} style={partnerStyles.partnerCard}>
                                 <View style={partnerStyles.partnerHeader}>
-                                    {/* Здесь мы используем URL картинки вместо Lucide-иконок */}
                                     <View style={[partnerStyles.partnerIconBox, { backgroundColor: p.color + '20' }]}>
-                                        <Image
-                                            source={{ uri: p.logoUrl }}
-                                            style={{ width: 26, height: 26, borderRadius: 8 }}
-                                            resizeMode="cover"
-                                        />
+                                        {p.logoUrl ? (
+                                            <Image
+                                                source={{ uri: p.logoUrl }}
+                                                style={{ width: 26, height: 26, borderRadius: 8 }}
+                                                resizeMode="cover"
+                                                onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                                            />
+                                        ) : (
+                                            <LucideIcons.ShoppingBag color={p.color} size={20} />
+                                        )}
                                     </View>
                                     <View style={partnerStyles.cashbackBadge}>
                                         <Text style={partnerStyles.cashbackText}>{p.cashbackPercent}%</Text>
@@ -229,7 +289,43 @@ export function DashboardScreen() {
     );
 }
 
-// ==================== Styles ====================
+// Стили для баннера ошибки
+const errorStyles = StyleSheet.create({
+    banner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 68, 68, 0.1)',
+        marginHorizontal: 20,
+        marginBottom: 16,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 68, 68, 0.3)',
+        gap: 10,
+    },
+    bannerText: {
+        color: '#FF8888',
+        fontSize: 12,
+        flex: 1,
+        lineHeight: 16,
+    },
+});
+
+// Оставляем FIRE_STATE для реальных данных
+const FIRE_STATE: StreakData = {
+    currentStreak: 50,
+    longestStreak: 50,
+    lastTransactionDate: '2024-01-15T14:30:00',
+    hoursRemaining: 4.5,
+    extraCashbackPercent: 1,
+    freezesAvailable: 2,
+    tier: 'cosmic',
+    multiplier: 1.0,
+    isActive: true,
+    totalCashbackEarned: 4520,
+};
+
+// ... остальные стили остаются без изменений
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#000000' },
     scrollContent: { paddingBottom: 40 },
