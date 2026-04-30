@@ -1,5 +1,7 @@
 services:
   frontend:
-    build: ./Dockerfile
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: frontend
     restart: always
