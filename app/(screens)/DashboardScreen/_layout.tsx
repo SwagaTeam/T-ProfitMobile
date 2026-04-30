@@ -18,6 +18,10 @@ const StackLayout = () => {
                 name="LoyaltyScreen"
                 options={{ headerShown: false }}
             />
+            <Stack.Screen
+                name="FireStreakScreen"
+                options={{ headerShown: false }}
+            />
         </Stack>
         <Toast />
       </>

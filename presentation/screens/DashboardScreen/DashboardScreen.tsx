@@ -87,7 +87,7 @@ export  function DashboardScreen() {
                                 size="large"
                                 showLabel
                                 showTimer
-                                onPress={() => router.push("/(screens)/FireStreakScreen")}
+                                onPress={() => router.push("/(screens)/DashboardScreen/FireStreakScreen")}
                             />
                             <Text style={fireStyles.ctaText}>Открыть</Text>
                         </View>

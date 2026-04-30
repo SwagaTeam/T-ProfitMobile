@@ -206,9 +206,6 @@ export const FireStreakScreen = () => {
                                 <Text style={styles.backArrow}>←</Text>
                             </TouchableOpacity>
                             <Text style={styles.navTitle}>Запал</Text>
-                            <TouchableOpacity style={styles.historyButton}>
-                                <Text style={styles.historyText}>История</Text>
-                            </TouchableOpacity>
                         </View>
 
                         {/* Fire + Info */}
@@ -344,26 +341,6 @@ export const FireStreakScreen = () => {
                             })}
                         </View>
                     )}
-
-                    {/* Rescue CTA */}
-                    <View style={styles.rescueSection}>
-                        <View style={styles.rescueCard}>
-                            <Text style={styles.rescueEmoji}>☕</Text>
-                            <View style={styles.rescueInfo}>
-                                <Text style={styles.rescueTitle}>
-                                    Продли стрик с Stars Coffee
-                                </Text>
-                                <Text style={styles.rescueDesc}>
-                                    Любая покупка — и твой огонь горит ещё 24 часа
-                                </Text>
-                            </View>
-                            <TouchableOpacity style={styles.rescueButton}>
-                                <Text style={styles.rescueButtonText}>→</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    {/* Bottom padding */}
                     <View style={{ height: 40 }} />
                 </View>
             </Animated.ScrollView>

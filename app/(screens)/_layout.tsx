@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import {Calendar, Folder, House, ListTodo, User} from "lucide-react-native";
+import {Calendar, Eclipse, Folder, House, ListTodo, Orbit, User} from "lucide-react-native";
 import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -71,7 +71,7 @@ export default () => {
                 }}
             >
                 <Tabs.Screen
-                    name="DashboardScreen/index"
+                    name="DashboardScreen"
                     options={{
                         tabBarIcon: ({ color, focused }) => (
                             <View style={styles.fullTabWrapper}>
@@ -91,12 +91,12 @@ export default () => {
                     options={{
                         tabBarIcon: ({ color, focused }) => (
                             <View style={styles.fullTabWrapper}>
-                                <Folder
+                                <Eclipse
                                     size={20}
                                     color={color}
                                     strokeWidth={focused ? 2 : 1.8}
                                 />
-                                <Text style={[styles.labelStyle, {color}]}>Т-орбита</Text>
+                                <Text style={[styles.labelStyle, {color}]}>Т Орбита</Text>
                             </View>
                         ),
                     }}
