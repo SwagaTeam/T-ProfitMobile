@@ -10,20 +10,21 @@ import {
     Platform,
     StatusBar
 } from 'react-native';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
 // @ts-ignore
 import * as THREE from 'three';
 import { X, ChevronRight, Sparkles, TrendingUp, Award } from 'lucide-react-native';
 import {useSafeAreaInsets} from "react-native-safe-area-context";
+import { useTexture } from '@react-three/drei/native';
 
 const { width, height } = Dimensions.get('window');
 
-// --- 1. ДАННЫЕ ПРОДУКТОВ (минималистичные цвета) ---
+// --- 1. ДАННЫЕ ПРОДУКТОВ ---
 const PLANETS_DATA = [
     {
         id: 'black',
         name: 'T-Black',
-        color: '#73e147',
+        color: '#ffffff',
         emissive: '#3A3A3A',
         distance: 2.2,
         speed: 0.15,
@@ -32,12 +33,14 @@ const PLANETS_DATA = [
         sub: 'Кэшбэк 5% • Премиум',
         usage: 94,
         monthlyGrowth: '+2 340 ₽',
-        category: 'Дебетовая карта'
+        category: 'Дебетовая карта',
+        textureMap: require('@/assets/textures/earth.jpg'),
+        normalMap: null,
     },
     {
         id: 'invest',
         name: 'Инвестиции',
-        color: '#1E3A5F',
+        color: '#ffffff',
         emissive: '#2A4D7C',
         distance: 3.2,
         speed: 0.12,
@@ -46,12 +49,14 @@ const PLANETS_DATA = [
         sub: '+12.3% за год',
         usage: 78,
         monthlyGrowth: '+18 240 ₽',
-        category: 'Брокерский счет'
+        category: 'Брокерский счет',
+        textureMap: require('@/assets/textures/mars.jpg'),
+        normalMap: null,
     },
     {
         id: 'premium',
         name: 'Premium',
-        color: '#3D2E5F',
+        color: '#ffffff',
         emissive: '#4A3970',
         distance: 4.0,
         speed: 0.09,
@@ -60,22 +65,24 @@ const PLANETS_DATA = [
         sub: 'VIP обслуживание',
         usage: 65,
         monthlyGrowth: '+45 000 ₽',
-        category: 'Премиум-счет'
+        category: 'Премиум-счет',
+        textureMap: require('@/assets/textures/neptune.jpg'),
+        normalMap: null,
     },
 ];
 
-// Минимальные частицы для сбора
 const DAILY_REWARDS = [
     { id: 1, angle: 45, radius: 2.8, value: 150 },
     { id: 2, angle: 135, radius: 3.5, value: 200 },
     { id: 3, angle: 225, radius: 2.5, value: 125 },
 ];
 
-// --- 2. 3D КОМПОНЕНТЫ (минималистичные) ---
+// --- 2. 3D КОМПОНЕНТЫ ---
 
-// Материал планеты с тонкой анимацией
-const PlanetMaterial = ({ color, emissive, isActive }: any) => {
+const PlanetMaterial = ({ data, isActive }: any) => {
     const materialRef = useRef<THREE.MeshStandardMaterial>(null!);
+    const texture = useTexture(data.textureMap);
+    const normalMap = data.normalMap ? useTexture(data.normalMap) : null;
 
     useFrame((state) => {
         if (materialRef.current) {
@@ -84,40 +91,56 @@ const PlanetMaterial = ({ color, emissive, isActive }: any) => {
         }
     });
 
+    useEffect(() => {
+        if (texture) {
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.anisotropy = 16;
+        }
+        if (normalMap) {
+            normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+        }
+    }, [texture, normalMap]);
+
     return (
         <meshStandardMaterial
             ref={materialRef}
-            color={color}
-            emissive={emissive}
+            map={texture}
+            normalMap={normalMap}
+            color={data.color}
+            emissive={data.emissive}
             emissiveIntensity={0.15}
-            metalness={0.9}
-            roughness={0.1}
+            metalness={0.4}
+            roughness={0.7}
         />
     );
 };
 
-// Минималистичная планета
-const Planet = ({ data, onSelect, isSelected }: any) => {
+const Planet = ({ data, onSelect, isSelected, isSystemPaused }: any) => {
     const groupRef = useRef<THREE.Group>(null!);
     const meshRef = useRef<THREE.Mesh>(null!);
     const ringRef = useRef<THREE.Mesh>(null!);
     const [hovered, setHovered] = useState(false);
 
-    useFrame((state) => {
-        const t = state.clock.getElapsedTime();
+    // Накапливаем угол вручную, чтобы избежать скачков при снятии с паузы
+    const currentAngle = useRef(0);
+
+    useFrame((state, delta) => {
+        // Двигаем по орбите только если система не на паузе
+        if (!isSystemPaused) {
+            currentAngle.current += delta * data.speed;
+        }
 
         if (groupRef.current) {
-            // Медленное плавное движение по орбите
-            const angle = t * data.speed;
-            groupRef.current.position.x = Math.cos(angle) * data.distance;
-            groupRef.current.position.z = Math.sin(angle) * data.distance;
+            groupRef.current.position.x = Math.cos(currentAngle.current) * data.distance;
+            groupRef.current.position.z = Math.sin(currentAngle.current) * data.distance;
+            groupRef.current.position.y = 0;
         }
 
         if (meshRef.current) {
-            // Медленное вращение
-            meshRef.current.rotation.y += 0.003;
+            // Сама планета продолжает вращаться всегда
+            const rotationSpeed = isSelected ? 0.008 : 0.003;
+            meshRef.current.rotation.y += rotationSpeed;
 
-            // Плавное масштабирование при наведении
             const targetScale = (hovered || isSelected) ? 1.15 : 1;
             meshRef.current.scale.lerp(
                 new THREE.Vector3(targetScale, targetScale, targetScale),
@@ -125,7 +148,6 @@ const Planet = ({ data, onSelect, isSelected }: any) => {
             );
         }
 
-        // Пульсация кольца при выборе
         if (ringRef.current && isSelected) {
             const pulse = Math.sin(state.clock.getElapsedTime() * 2) * 0.1 + 0.9;
             ringRef.current.scale.setScalar(pulse);
@@ -133,8 +155,8 @@ const Planet = ({ data, onSelect, isSelected }: any) => {
     });
 
     return (
-        <group ref={groupRef}>
-            {/* Планета */}
+        // Даем группе имя, чтобы камера могла легко её найти
+        <group ref={groupRef} name={data.id}>
             <mesh
                 ref={meshRef}
                 onClick={(e: any) => {
@@ -145,14 +167,11 @@ const Planet = ({ data, onSelect, isSelected }: any) => {
                 onPointerOut={() => setHovered(false)}
             >
                 <sphereGeometry args={[data.size, 64, 64]} />
-                <PlanetMaterial
-                    color={data.color}
-                    emissive={data.emissive}
-                    isActive={isSelected}
-                />
+                <Suspense fallback={<FallbackMaterial color={data.color} emissive={data.emissive} />}>
+                    <PlanetMaterial data={data} isActive={isSelected} />
+                </Suspense>
             </mesh>
 
-            {/* Тонкое кольцо выделения */}
             {isSelected && (
                 <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]}>
                     <ringGeometry args={[data.size * 1.3, data.size * 1.35, 64]} />
@@ -165,7 +184,6 @@ const Planet = ({ data, onSelect, isSelected }: any) => {
                 </mesh>
             )}
 
-            {/* Тонкий ореол */}
             <mesh>
                 <sphereGeometry args={[data.size * 1.08, 32, 32]} />
                 <meshBasicMaterial
@@ -173,14 +191,24 @@ const Planet = ({ data, onSelect, isSelected }: any) => {
                     transparent
                     opacity={0.05}
                     blending={THREE.AdditiveBlending}
+                    side={THREE.BackSide}
                 />
             </mesh>
         </group>
     );
 };
 
-// Тонкие орбиты
-const MinimalOrbits = () => {
+const FallbackMaterial = ({ color, emissive }: any) => (
+    <meshStandardMaterial
+        color={color}
+        emissive={emissive}
+        emissiveIntensity={0.15}
+        metalness={0.9}
+        roughness={0.1}
+    />
+);
+
+const MinimalOrbits = ({ selectedPlanet }: any) => {
     return (
         <>
             {PLANETS_DATA.map((p, i) => (
@@ -190,7 +218,7 @@ const MinimalOrbits = () => {
                         color="#FFFFFF"
                         side={THREE.DoubleSide}
                         transparent
-                        opacity={0.09}
+                        opacity={selectedPlanet ? 0.03 : 0.09} // Затемняем орбиты при выборе
                     />
                 </mesh>
             ))}
@@ -198,8 +226,7 @@ const MinimalOrbits = () => {
     );
 };
 
-// Центральный элемент (не солнце, а hub)
-const CentralHub = () => {
+const CentralHub = ({ selectedPlanet }: any) => {
     const hubRef = useRef<THREE.Mesh>(null!);
     const glowRef = useRef<THREE.Mesh>(null!);
 
@@ -216,37 +243,33 @@ const CentralHub = () => {
 
     return (
         <group>
-            {/* Центральная сфера */}
             <mesh ref={hubRef}>
                 <sphereGeometry args={[0.4, 64, 64]} />
                 <meshStandardMaterial
                     color={"#7070d5"}
                     emissive={"#b5b5b5"}
-                    emissiveIntensity={0.3}
+                    emissiveIntensity={selectedPlanet ? 0.1 : 0.3} // Затемняем при выборе
                     metalness={1}
                     roughness={0.1}
                 />
             </mesh>
 
-            {/* Тонкое свечение */}
             <mesh ref={glowRef}>
                 <sphereGeometry args={[1, 32, 32]} />
                 <meshBasicMaterial
                     color="#FFFFFF"
                     transparent
-                    opacity={0.03}
+                    opacity={selectedPlanet ? 0.01 : 0.03}
                     blending={THREE.AdditiveBlending}
                 />
             </mesh>
 
-            {/* Точечный свет */}
-            <pointLight color="#FFFFFF" intensity={5} distance={12} decay={2} />
+            <pointLight color="#FFFFFF" intensity={selectedPlanet ? 2 : 5} distance={12} decay={2} />
         </group>
     );
 };
 
-// Минималистичные награды
-const RewardParticle = ({ data, collected, onCollect }: any) => {
+const RewardParticle = ({ data, collected, onCollect, selectedPlanet }: any) => {
     const ref = useRef<THREE.Mesh>(null!);
     const [hovered, setHovered] = useState(false);
 
@@ -256,7 +279,6 @@ const RewardParticle = ({ data, collected, onCollect }: any) => {
             ref.current.position.x = Math.cos(angle) * data.radius;
             ref.current.position.z = Math.sin(angle) * data.radius;
             ref.current.position.y = Math.sin(state.clock.getElapsedTime() + data.id) * 0.1;
-
             ref.current.rotation.y += 0.01;
 
             const scale = hovered ? 1.3 : 1;
@@ -264,7 +286,7 @@ const RewardParticle = ({ data, collected, onCollect }: any) => {
         }
     });
 
-    if (collected) return null;
+    if (collected || selectedPlanet) return null; // Скрываем награды при выборе планеты
 
     return (
         <mesh
@@ -285,8 +307,7 @@ const RewardParticle = ({ data, collected, onCollect }: any) => {
     );
 };
 
-// Минималистичные звезды
-const SubtleStarField = () => {
+const SubtleStarField = ({ selectedPlanet }: any) => {
     const starsRef = useRef<THREE.Points>(null!);
 
     const starPositions = React.useMemo(() => {
@@ -319,21 +340,71 @@ const SubtleStarField = () => {
                 size={0.02}
                 color="#FFFFFF"
                 transparent
-                opacity={0.3}
+                opacity={selectedPlanet ? 0.1 : 0.3} // Затемняем звезды
                 sizeAttenuation
             />
         </points>
     );
 };
 
-// Статичная камера с легким движением
-const CameraController = () => {
-    const { camera } = useThree();
+// НОВЫЙ КОНТРОЛЛЕР КАМЕРЫ С ПЛАВНЫМ ПРИБЛИЖЕНИЕМ
+const CameraController = ({ selectedPlanet }: any) => {
+    const { camera, scene } = useThree();
 
-    useFrame((state) => {
-        camera.position.x = Math.sin(state.clock.getElapsedTime() * 0.05) * 0.1;
-        camera.position.y = 4.5 + Math.sin(state.clock.getElapsedTime() * 0.08) * 0.05;
-        camera.lookAt(0, 0, 0);
+    // Храним текущие точки: позицию камеры и точку фокуса
+    const cameraPosTarget = useRef(new THREE.Vector3(0, 0, 0));
+    const lookAtTarget = useRef(new THREE.Vector3(0, 0, 0));
+
+    useFrame((state, delta) => {
+        if (selectedPlanet) {
+            // Находим реальный объект планеты в сцене по id
+            const planetObj = scene.getObjectByName(selectedPlanet.id);
+
+            if (planetObj) {
+                const planetPos = new THREE.Vector3();
+                planetObj.getWorldPosition(planetPos);
+
+                // Расстояние от камеры до планеты
+                const distance = 2.5;
+
+                // Направление от центра сцены к планете
+                const directionToPlanet = planetPos.clone().normalize();
+
+                // Желаемая позиция камеры (сбоку от планеты, на том же расстоянии)
+                const desiredCameraPos = planetPos.clone().add(
+                    directionToPlanet.multiplyScalar(distance)
+                );
+
+                // Точка фокуса: смещаемся от планеты ВНИЗ, чтобы планета оказалась вверху кадра
+                // Чем больше смещение по Y, тем выше будет планета
+                const verticalOffset = 0.5; // подбери значение под свой масштаб
+                const desiredLookAt = planetPos.clone();
+                desiredLookAt.y -= verticalOffset;
+
+                // Плавное обновление целевых точек
+                cameraPosTarget.current.lerp(desiredCameraPos, 4 * delta);
+                lookAtTarget.current.lerp(desiredLookAt, 4 * delta);
+
+                // Применяем позицию и фокус
+                camera.position.copy(cameraPosTarget.current);
+                camera.lookAt(lookAtTarget.current);
+            }
+        } else {
+            // Возврат к стандартной позиции камеры
+            const t = state.clock.getElapsedTime();
+            const defaultPos = new THREE.Vector3(
+                Math.sin(t * 0.05) * 0.1,
+                4.5 + Math.sin(t * 0.08) * 0.05,
+                6.5
+            );
+            const defaultLookAt = new THREE.Vector3(0, 0, 0);
+
+            cameraPosTarget.current.lerp(defaultPos, 3 * delta);
+            lookAtTarget.current.lerp(defaultLookAt, 3 * delta);
+
+            camera.position.copy(cameraPosTarget.current);
+            camera.lookAt(lookAtTarget.current);
+        }
     });
 
     return null;
@@ -348,6 +419,7 @@ export function OrbitScreen() {
 
     const fadeAnim = useRef(new RNAnimated.Value(0)).current;
     const slideAnim = useRef(new RNAnimated.Value(50)).current;
+    const sheetSlideAnim = useRef(new RNAnimated.Value(height)).current; // Для ModalBottomSheet
     const insets = useSafeAreaInsets();
 
     useEffect(() => {
@@ -364,6 +436,24 @@ export function OrbitScreen() {
             }),
         ]).start();
     }, []);
+
+    // Анимация появления/скрытия ModalBottomSheet
+    useEffect(() => {
+        if (selectedPlanet) {
+            RNAnimated.spring(sheetSlideAnim, {
+                toValue: 0,
+                useNativeDriver: true,
+                tension: 50,
+                friction: 10,
+            }).start();
+        } else {
+            RNAnimated.timing(sheetSlideAnim, {
+                toValue: height,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [selectedPlanet]);
 
     const handleCollectReward = (id: number, value: number) => {
         setCollectedRewards([...collectedRewards, id]);
@@ -389,16 +479,15 @@ export function OrbitScreen() {
             >
                 <color attach="background" args={['#000000']} />
 
-                {/* Мягкое освещение */}
-                <ambientLight intensity={0.3} />
-                <hemisphereLight args={['#ffffff', '#444444', 0.4]} />
-                <directionalLight position={[5, 5, 5]} intensity={0.5} />
+                <ambientLight intensity={selectedPlanet ? 0.5 : 0.3} />
+                <hemisphereLight args={['#ffffff', '#444444', selectedPlanet ? 0.6 : 0.4]} />
+                <directionalLight position={[5, 5, 5]} intensity={selectedPlanet ? 0.8 : 0.5} />
 
                 <Suspense fallback={null}>
-                    <CameraController />
-                    <SubtleStarField />
-                    <MinimalOrbits />
-                    <CentralHub />
+                    <CameraController selectedPlanet={selectedPlanet} />
+                    <SubtleStarField selectedPlanet={selectedPlanet} />
+                    <MinimalOrbits selectedPlanet={selectedPlanet} />
+                    <CentralHub selectedPlanet={selectedPlanet} />
 
                     {PLANETS_DATA.map(planet => (
                         <Planet
@@ -406,6 +495,7 @@ export function OrbitScreen() {
                             data={planet}
                             onSelect={setSelectedPlanet}
                             isSelected={selectedPlanet?.id === planet.id}
+                            isSystemPaused={!!selectedPlanet} // <-- Добавлен этот пропс
                         />
                     ))}
 
@@ -415,6 +505,7 @@ export function OrbitScreen() {
                             data={reward}
                             collected={collectedRewards.includes(reward.id)}
                             onCollect={() => handleCollectReward(reward.id, reward.value)}
+                            selectedPlanet={selectedPlanet}
                         />
                     ))}
                 </Suspense>
@@ -432,41 +523,34 @@ export function OrbitScreen() {
                     ]}
                     pointerEvents="box-none"
                 >
-                    {/* Хедер
-                    <View style={styles.header} pointerEvents="box-none">
-                        <View>
-                            <Text style={styles.greeting}>Добрый вечер</Text>
-                            <Text style={styles.balance}>
-                                {totalBalance.toLocaleString('ru-RU')} ₽
-                            </Text>
-                        </View>
-
-                        {uncollectedCount > 0 && (
-                            <TouchableOpacity style={styles.rewardButton}>
-                                <View style={styles.rewardDot} />
-                                <Text style={styles.rewardText}>{uncollectedCount}</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>*/}
-
-                    {/* Метрики */}
-                    <View style={styles.metricsContainer} pointerEvents="auto">
-                        <View style={styles.metricItem}>
-                            <Text style={styles.metricLabel}>За месяц</Text>
-                            <Text style={styles.metricValue}>+65 580 ₽</Text>
-                            <View style={styles.trendContainer}>
-                                <TrendingUp color="#34C759" size={14} />
-                                <Text style={styles.trendText}>+12.3%</Text>
+                    {/* Метрики - скрываем при выборе планеты */}
+                    {!selectedPlanet && (
+                        <RNAnimated.View
+                            style={[
+                                styles.metricsContainer,
+                                {
+                                    opacity: fadeAnim,
+                                }
+                            ]}
+                            pointerEvents="auto"
+                        >
+                            <View style={styles.metricItem}>
+                                <Text style={styles.metricLabel}>За месяц</Text>
+                                <Text style={styles.metricValue}>+65 580 ₽</Text>
+                                <View style={styles.trendContainer}>
+                                    <TrendingUp color="#34C759" size={14} />
+                                    <Text style={styles.trendText}>+12.3%</Text>
+                                </View>
                             </View>
-                        </View>
 
-                        <View style={styles.metricDivider} />
+                            <View style={styles.metricDivider} />
 
-                        <View style={styles.metricItem}>
-                            <Text style={styles.metricLabel}>Активных продуктов</Text>
-                            <Text style={styles.metricValue}>{PLANETS_DATA.length}</Text>
-                        </View>
-                    </View>
+                            <View style={styles.metricItem}>
+                                <Text style={styles.metricLabel}>Активных продуктов</Text>
+                                <Text style={styles.metricValue}>{PLANETS_DATA.length}</Text>
+                            </View>
+                        </RNAnimated.View>
+                    )}
 
                     {/* Подсказка */}
                     {!selectedPlanet && uncollectedCount > 0 && (
@@ -477,10 +561,15 @@ export function OrbitScreen() {
                         </View>
                     )}
 
-                    {/* Детали планеты */}
+                    {/* MODAL BOTTOM SHEET С АНИМАЦИЕЙ */}
                     {selectedPlanet && (
                         <RNAnimated.View
-                            style={[styles.detailSheet, { opacity: fadeAnim }]}
+                            style={[
+                                styles.detailSheet,
+                                {
+                                    transform: [{ translateY: sheetSlideAnim }]
+                                }
+                            ]}
                             pointerEvents="auto"
                         >
                             <View style={styles.sheetIndicator} />
@@ -489,7 +578,6 @@ export function OrbitScreen() {
                                 showsVerticalScrollIndicator={false}
                                 contentContainerStyle={styles.sheetContent}
                             >
-                                {/* Заголовок */}
                                 <View style={styles.detailHeader}>
                                     <View>
                                         <Text style={styles.detailCategory}>{selectedPlanet.category}</Text>
@@ -503,42 +591,14 @@ export function OrbitScreen() {
                                     </TouchableOpacity>
                                 </View>
 
-                                {/* Баланс */}
                                 <View style={styles.balanceSection}>
                                     <Text style={styles.balanceAmount}>{selectedPlanet.balance}</Text>
                                     <Text style={styles.balanceDescription}>{selectedPlanet.sub}</Text>
                                 </View>
 
-                                {/* Рост */}
-                                <View style={styles.growthCard}>
-                                    <View style={styles.growthHeader}>
-                                        <Text style={styles.growthLabel}>Рост за месяц</Text>
-                                        <Award color="#34C759" size={18} />
-                                    </View>
-                                    <Text style={styles.growthValue}>{selectedPlanet.monthlyGrowth}</Text>
-
-                                    {/* Прогресс */}
-                                    <View style={styles.progressContainer}>
-                                        <View style={styles.progressTrack}>
-                                            <View
-                                                style={[
-                                                    styles.progressBar,
-                                                    { width: `${selectedPlanet.usage}%` }
-                                                ]}
-                                            />
-                                        </View>
-                                        <Text style={styles.progressLabel}>{selectedPlanet.usage}% от цели</Text>
-                                    </View>
-                                </View>
-
-                                {/* Действия */}
                                 <TouchableOpacity style={styles.primaryAction}>
                                     <Text style={styles.primaryActionText}>Открыть продукт</Text>
                                     <ChevronRight color="#000000" size={20} />
-                                </TouchableOpacity>
-
-                                <TouchableOpacity style={styles.secondaryAction}>
-                                    <Text style={styles.secondaryActionText}>Пополнить</Text>
                                 </TouchableOpacity>
                             </ScrollView>
                         </RNAnimated.View>
@@ -549,7 +609,6 @@ export function OrbitScreen() {
     );
 }
 
-// --- 4. СТИЛИ (минималистичные) ---
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -560,48 +619,6 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        paddingHorizontal: 24,
-        paddingTop: 16,
-    },
-    greeting: {
-        color: '#8E8E93',
-        fontSize: 15,
-        fontWeight: '400',
-        marginBottom: 4,
-    },
-    balance: {
-        color: '#FFFFFF',
-        fontSize: 34,
-        fontWeight: '600',
-        letterSpacing: -0.5,
-    },
-    rewardButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 20,
-        gap: 8,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.12)',
-    },
-    rewardDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#34C759',
-    },
-    rewardText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '500',
     },
     metricsContainer: {
         flexDirection: 'row',
@@ -646,7 +663,8 @@ const styles = StyleSheet.create({
     hint: {
         alignItems: 'center',
         paddingHorizontal: 40,
-        marginBottom: 20,
+        marginTop: 'auto',
+        marginBottom: 40,
     },
     hintText: {
         color: '#8E8E93',
@@ -654,6 +672,10 @@ const styles = StyleSheet.create({
         fontWeight: '400',
     },
     detailSheet: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
         backgroundColor: 'rgba(18, 18, 18, 0.98)',
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
@@ -662,6 +684,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.08)',
         borderBottomWidth: 0,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 10,
     },
     sheetIndicator: {
         width: 36,
