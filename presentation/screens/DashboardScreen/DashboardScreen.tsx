@@ -1,16 +1,41 @@
 import React from 'react';
-import { StyleSheet, ScrollView, View, Text, SafeAreaView, TouchableOpacity } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as LucideIcons from 'lucide-react-native';
 import {DASHBOARD_DATA} from "@/data/Mock";
+import {router} from "expo-router";
+import {useSafeAreaInsets} from "react-native-safe-area-context";
+import { FireButton } from '@/presentation/components/FireButton/FireButton';
+import { StreakData } from '@/domain/models/streak';
 
 export  function DashboardScreen() {
+    const insets = useSafeAreaInsets();
+
+    const FIRE_STATE: StreakData = {
+        currentStreak: 50,
+        longestStreak: 50,
+        lastTransactionDate: '2024-01-15T14:30:00',
+        hoursRemaining: 4.5,
+        extraCashbackPercent: 1,
+        freezesAvailable: 2,
+        tier: 'cosmic',
+        multiplier: 1.0,
+        isActive: true,
+        totalCashbackEarned: 4520,
+    };
+
+    const formatHoursLeft = (hours: number) => {
+        const h = Math.floor(hours);
+        const m = Math.floor((hours - h) * 60);
+        return `${h}ч ${String(m).padStart(2, '0')}м`;
+    };
+
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={[styles.container, {paddingTop: insets.top + 15, paddingBottom: insets.bottom + 15 }]}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 {/* ==================== Header ==================== */}
                 <View style={headerStyles.container}>
-                    <View style={headerStyles.profileRow}>
+                    <TouchableOpacity onPress={() => router.push("/(screens)/DashboardScreen/ProfileScreen")} style={headerStyles.profileRow}>
                         <LinearGradient colors={['#4e81ff', '#3a6bd6']} style={headerStyles.avatar}>
                             <LucideIcons.User color="#fff" size={24} />
                         </LinearGradient>
@@ -18,13 +43,56 @@ export  function DashboardScreen() {
                             <Text style={headerStyles.greeting}>Привет,</Text>
                             <Text style={headerStyles.name}>Александр</Text>
                         </View>
-                    </View>
+                    </TouchableOpacity>
                     <LinearGradient colors={['#2c2c2e', '#1c1c1e']} style={headerStyles.premiumBadge}>
                         <Text style={headerStyles.premiumText}>Premium</Text>
                     </LinearGradient>
                 </View>
 
                 <Text style={styles.mainTitle}>Ваша выгода</Text>
+
+                <View style={fireStyles.container}>
+                    <View style={fireStyles.card}>
+                        <View style={fireStyles.info}>
+                            <View style={fireStyles.badge}>
+                                <Text style={fireStyles.badgeText}>Запал активен</Text>
+                            </View>
+
+                            <Text style={fireStyles.title}>{FIRE_STATE.currentStreak} дней подряд</Text>
+
+                            <Text style={fireStyles.description}>
+                                Вы уже открыли +{FIRE_STATE.extraCashbackPercent}% к кэшбэку.
+                                Ещё {FIRE_STATE.hoursRemaining} дней — и будет доступ к закрытому клубу
+                                с повышенными ставками у партнёров.
+                            </Text>
+
+                            <View style={fireStyles.metaRow}>
+                                <View style={fireStyles.metaChip}>
+                                    <LucideIcons.Clock3 color="#FFDD2D" size={14} />
+                                    <Text style={fireStyles.metaText}>
+                                        {formatHoursLeft(FIRE_STATE.hoursRemaining)} до сброса
+                                    </Text>
+                                </View>
+
+                                <View style={fireStyles.metaChip}>
+                                    <LucideIcons.Percent color="#FFDD2D" size={14} />
+                                    <Text style={fireStyles.metaText}>+1% ко всем категориям</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        <View style={fireStyles.side}>
+                            <FireButton
+                                streak={FIRE_STATE}
+                                size="large"
+                                showLabel
+                                showTimer
+                                onPress={() => router.push("/(screens)/FireStreakScreen")}
+                            />
+                            <Text style={fireStyles.ctaText}>Открыть</Text>
+                        </View>
+                    </View>
+                </View>
 
                 {/* ==================== SavingsCard ==================== */}
                 <View style={cardStyles.container}>
@@ -47,7 +115,7 @@ export  function DashboardScreen() {
                             </View>
                         </View>
 
-                        <TouchableOpacity style={cardStyles.button}>
+                        <TouchableOpacity style={cardStyles.button} onPress={() => router.push("/(screens)/DashboardScreen/LoyaltyScreen")}>
                             <Text style={cardStyles.buttonText}>Аналитика и прогноз</Text>
                         </TouchableOpacity>
                     </View>
@@ -123,7 +191,7 @@ export  function DashboardScreen() {
                     </View>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -197,4 +265,84 @@ const partnerStyles = StyleSheet.create({
     cashbackBadge: { backgroundColor: '#2c2c2e', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
     cashbackText: { color: '#FFD700', fontSize: 11, fontWeight: '700' },
     partnerName: { fontWeight: '600', fontSize: 14, color: '#fff' }
+});
+
+const fireStyles = StyleSheet.create({
+    container: {
+        paddingHorizontal: 20,
+        marginBottom: 22,
+    },
+    card: {
+        borderRadius: 26,
+        paddingHorizontal: 20,
+        paddingVertical: 24,
+        backgroundColor: '#191919',
+        borderWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        overflow: 'hidden',
+    },
+    info: {
+        flex: 1,
+        paddingRight: 16,
+    },
+    badge: {
+        alignSelf: 'flex-start',
+        backgroundColor: 'rgba(255,221,45,0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,221,45,0.18)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 999,
+        marginBottom: 12,
+    },
+    badgeText: {
+        color: '#FFDD2D',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        marginBottom: 8,
+    },
+    description: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: '#A1A1AA',
+        marginBottom: 14,
+        maxWidth: '96%',
+    },
+    metaRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    metaChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        borderRadius: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        marginRight: 8,
+        marginBottom: 8,
+    },
+    metaText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '600',
+        marginLeft: 6,
+    },
+    side: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    ctaText: {
+        marginTop: 14,
+        color: '#8E8E93',
+        fontSize: 12,
+        fontWeight: '600',
+    },
 });

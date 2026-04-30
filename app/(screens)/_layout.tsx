@@ -9,7 +9,6 @@ import {LinearGradient} from "expo-linear-gradient";
 
 export default () => {
     const insets = useSafeAreaInsets();
-    const role = AuthService.getRole();
 
     return (
         <>
@@ -72,7 +71,7 @@ export default () => {
                 }}
             >
                 <Tabs.Screen
-                    name="DashboardScreen"
+                    name="DashboardScreen/index"
                     options={{
                         tabBarIcon: ({ color, focused }) => (
                             <View style={styles.fullTabWrapper}>
@@ -102,36 +101,7 @@ export default () => {
                         ),
                     }}
                 />
-
-                {role === "Admin" ? (
-                    <Tabs.Screen
-                        name="UserListScreen"
-                        options={{
-                            tabBarIcon: ({ color, focused }) => (
-                                <View style={styles.fullTabWrapper}>
-                                    <User
-                                        size={20}
-                                        color={color}
-                                        strokeWidth={focused ? 2 : 1.8}
-                                    />
-                                    <Text style={[styles.labelStyle, {color}]}>Аккаунты</Text>
-                                </View>
-                            ),
-                        }}
-                    />
-                ) : (
-                    <Tabs.Screen
-                        name="UserListScreen"
-                        options={{
-                            href: null,
-                        }}
-                    />
-                )}
-
-                <Tabs.Screen name="EventDetailsScreen" options={{ href: null }} />
-                <Tabs.Screen name="CreateEventScreen" options={{ href: null }} />
-                <Tabs.Screen name="TaskDetailScreen" options={{ href: null }} />
-                <Tabs.Screen name="ProfileScreen" options={{ href: null }} getId={({ params }) => params?.id} />
+                <Tabs.Screen name="ProfileScreen" options={{ href: null }} />
             </Tabs>
         </>
     );

@@ -7,17 +7,17 @@ const StackLayout = () => {
       <>
         <Stack>
           <Stack.Screen
-              name="(screens)"
-              options={{ headerShown: false }}
-          />
-          <Stack.Screen
               name="index"
               options={{ headerShown: false }}
           />
           <Stack.Screen
-              name="AuthScreen"
+              name="ProfileScreen"
               options={{ headerShown: false }}
           />
+            <Stack.Screen
+                name="LoyaltyScreen"
+                options={{ headerShown: false }}
+            />
         </Stack>
         <Toast />
       </>

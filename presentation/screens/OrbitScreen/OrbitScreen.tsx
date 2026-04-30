@@ -4,7 +4,6 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    SafeAreaView,
     Dimensions,
     Animated as RNAnimated,
     ScrollView,
@@ -12,8 +11,10 @@ import {
     StatusBar
 } from 'react-native';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+// @ts-ignore
 import * as THREE from 'three';
 import { X, ChevronRight, Sparkles, TrendingUp, Award } from 'lucide-react-native';
+import {useSafeAreaInsets} from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get('window');
 
@@ -22,11 +23,11 @@ const PLANETS_DATA = [
     {
         id: 'black',
         name: 'T-Black',
-        color: '#2A2A2A',
+        color: '#73e147',
         emissive: '#3A3A3A',
         distance: 2.2,
         speed: 0.15,
-        size: 0.32,
+        size: 0.72,
         balance: '45 287 ₽',
         sub: 'Кэшбэк 5% • Премиум',
         usage: 94,
@@ -40,7 +41,7 @@ const PLANETS_DATA = [
         emissive: '#2A4D7C',
         distance: 3.2,
         speed: 0.12,
-        size: 0.38,
+        size: 0.88,
         balance: '487 920 ₽',
         sub: '+12.3% за год',
         usage: 78,
@@ -54,7 +55,7 @@ const PLANETS_DATA = [
         emissive: '#4A3970',
         distance: 4.0,
         speed: 0.09,
-        size: 0.28,
+        size: 0.78,
         balance: '1 250 000 ₽',
         sub: 'VIP обслуживание',
         usage: 65,
@@ -136,7 +137,7 @@ const Planet = ({ data, onSelect, isSelected }: any) => {
             {/* Планета */}
             <mesh
                 ref={meshRef}
-                onClick={(e) => {
+                onClick={(e: any) => {
                     e.stopPropagation();
                     onSelect(data);
                 }}
@@ -189,7 +190,7 @@ const MinimalOrbits = () => {
                         color="#FFFFFF"
                         side={THREE.DoubleSide}
                         transparent
-                        opacity={0.08}
+                        opacity={0.09}
                     />
                 </mesh>
             ))}
@@ -219,8 +220,8 @@ const CentralHub = () => {
             <mesh ref={hubRef}>
                 <sphereGeometry args={[0.4, 64, 64]} />
                 <meshStandardMaterial
-                    color="#1C1C1E"
-                    emissive="#2C2C2E"
+                    color={"#7070d5"}
+                    emissive={"#b5b5b5"}
                     emissiveIntensity={0.3}
                     metalness={1}
                     roughness={0.1}
@@ -229,7 +230,7 @@ const CentralHub = () => {
 
             {/* Тонкое свечение */}
             <mesh ref={glowRef}>
-                <sphereGeometry args={[0.5, 32, 32]} />
+                <sphereGeometry args={[1, 32, 32]} />
                 <meshBasicMaterial
                     color="#FFFFFF"
                     transparent
@@ -239,7 +240,7 @@ const CentralHub = () => {
             </mesh>
 
             {/* Точечный свет */}
-            <pointLight color="#FFFFFF" intensity={1.5} distance={12} decay={2} />
+            <pointLight color="#FFFFFF" intensity={5} distance={12} decay={2} />
         </group>
     );
 };
@@ -347,6 +348,7 @@ export function OrbitScreen() {
 
     const fadeAnim = useRef(new RNAnimated.Value(0)).current;
     const slideAnim = useRef(new RNAnimated.Value(50)).current;
+    const insets = useSafeAreaInsets();
 
     useEffect(() => {
         RNAnimated.parallel([
@@ -376,7 +378,7 @@ export function OrbitScreen() {
 
             {/* 3D СЦЕНА */}
             <Canvas
-                camera={{ position: [0, 4.5, 6.5], fov: 50 }}
+                camera={{ position: [0, 4.5, 6.5], fov: 80 }}
                 style={{ flex: 1 }}
                 gl={{
                     antialias: true,
@@ -419,7 +421,7 @@ export function OrbitScreen() {
             </Canvas>
 
             {/* UI OVERLAY */}
-            <SafeAreaView style={styles.overlay} pointerEvents="box-none">
+            <View style={[styles.overlay, {paddingTop: insets.top + 15, paddingBottom: insets.bottom + 15 }]} pointerEvents="box-none">
                 <RNAnimated.View
                     style={[
                         styles.content,
@@ -430,7 +432,7 @@ export function OrbitScreen() {
                     ]}
                     pointerEvents="box-none"
                 >
-                    {/* Хедер */}
+                    {/* Хедер
                     <View style={styles.header} pointerEvents="box-none">
                         <View>
                             <Text style={styles.greeting}>Добрый вечер</Text>
@@ -445,7 +447,7 @@ export function OrbitScreen() {
                                 <Text style={styles.rewardText}>{uncollectedCount}</Text>
                             </TouchableOpacity>
                         )}
-                    </View>
+                    </View>*/}
 
                     {/* Метрики */}
                     <View style={styles.metricsContainer} pointerEvents="auto">
@@ -542,7 +544,7 @@ export function OrbitScreen() {
                         </RNAnimated.View>
                     )}
                 </RNAnimated.View>
-            </SafeAreaView>
+            </View>
         </View>
     );
 }
@@ -558,7 +560,7 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        justifyContent: 'space-between',
+
     },
     header: {
         flexDirection: 'row',

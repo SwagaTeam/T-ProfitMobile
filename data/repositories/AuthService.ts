@@ -1,78 +1,66 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {apiClient} from "@/data/api/apiClient";
 
 export class AuthService {
-    private static token: string | null = null;
     private static userId: string | null = null;
-    private static listeners: ((token: string | null) => void)[] = [];
-    private static userRole: string | null = null;
+    private static listeners: ((userId: string | null) => void)[] = [];
 
     static async initialize() {
         try {
-            const [token, expiry, userId, userRole] = await Promise.all([
-                AsyncStorage.getItem('authToken'),
-                AsyncStorage.getItem('authTokenExpiry'),
-                AsyncStorage.getItem('userId'),
-                AsyncStorage.getItem('userRole')
-            ]);
-
-            if (token && expiry) {
-                const now = Date.now();
-                if (now < parseInt(expiry, 10)) {
-                    this.token = token;
-                    this.userId = userId;
-                } else {
-                    await this.clearAuth();
-                }
+            const savedUserId = await AsyncStorage.getItem('userId');
+            if (savedUserId) {
+                this.userId = savedUserId;
             }
         } catch (e) {
             console.error('Auth initialization error:', e);
         }
     }
 
-    static getToken() { return this.token; }
     static getUserId() { return this.userId; }
-    static getRole() { return this.userRole; }
+    static isAuthenticated(): boolean { return this.userId !== null; }
 
-    static async setAuth(token: string, userId: string, userRole: string, expiresInDays: number = 30) {
-        this.token = token;
+    static async login(phoneNumber: string): Promise<string | null> {
+        try {
+            const formattedPhone = encodeURIComponent(phoneNumber);
+            const response = await apiClient.get(`/User/phone-number/${formattedPhone}`);
+
+            if (response.status === 200 && response.data) {
+                const userId = response.data.toString();
+                await this.setAuth(userId);
+                return userId;
+            }
+            return null;
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
+    }
+
+    static async setAuth(userId: string) {
         this.userId = userId;
 
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + expiresInDays);
-        const expiryTimestamp = expiryDate.getTime().toString();
-
         try {
-            await Promise.all([
-                AsyncStorage.setItem('authToken', token),
-                AsyncStorage.setItem('userId', userId),
-                AsyncStorage.setItem('authTokenExpiry', expiryTimestamp),
-                AsyncStorage.setItem('userRole', userRole)
-            ]);
+            await AsyncStorage.setItem('userId', userId);
         } catch (e) {
-            console.error('Error saving auth data:', e);
+            console.error('Error saving user ID:', e);
         }
 
         this.notifyListeners();
     }
 
     static async clearAuth() {
-        this.token = null;
         this.userId = null;
+
         try {
-            await Promise.all([
-                AsyncStorage.removeItem('authToken'),
-                AsyncStorage.removeItem('authTokenExpiry'),
-                AsyncStorage.removeItem('userData'),
-                AsyncStorage.removeItem('userId'),
-                AsyncStorage.removeItem('userRole'),
-            ]);
+            await AsyncStorage.removeItem('userId');
         } catch (e) {
             console.error('Error clearing auth:', e);
         }
+
         this.notifyListeners();
     }
 
-    static addListener(listener: (token: string | null) => void) {
+    static addListener(listener: (userId: string | null) => void) {
         this.listeners.push(listener);
         return () => {
             this.listeners = this.listeners.filter(l => l !== listener);
@@ -80,10 +68,6 @@ export class AuthService {
     }
 
     private static notifyListeners() {
-        this.listeners.forEach(l => l(this.token));
-    }
-
-    static isTokenValid(): boolean {
-        return this.token !== null;
+        this.listeners.forEach(l => l(this.userId));
     }
 }
