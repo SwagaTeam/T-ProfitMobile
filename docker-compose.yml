@@ -1,0 +1,5 @@
+services:
+  frontend:
+    build: ./Dockerfile
+    container_name: frontend
+    restart: always
