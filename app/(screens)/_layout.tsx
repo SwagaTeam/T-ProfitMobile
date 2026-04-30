@@ -86,10 +86,10 @@ export default () => {
                     }}
                 />
 
-                <Tabs.Screen
+                {Platform.OS !== "web" && <Tabs.Screen
                     name="OrbitScreen"
                     options={{
-                        tabBarIcon: ({ color, focused }) => (
+                        tabBarIcon: ({color, focused}) => (
                             <View style={styles.fullTabWrapper}>
                                 <Eclipse
                                     size={20}
@@ -100,7 +100,8 @@ export default () => {
                             </View>
                         ),
                     }}
-                />
+                />}
+                {Platform.OS === "web" && <Tabs.Screen name="OrbitScreen" options={{ href: null }} />}
                 <Tabs.Screen name="ProfileScreen" options={{ href: null }} />
             </Tabs>
         </>

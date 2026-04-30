@@ -1,2 +1,2 @@
-import {OrbitScreen} from "@/presentation/screens/OrbitScreen/OrbitScreen"
-export default OrbitScreen;
+import OrbitScreenLoader from '@/presentation/screens/OrbitScreen/OrbitScreen.lazy';
+export default OrbitScreenLoader;

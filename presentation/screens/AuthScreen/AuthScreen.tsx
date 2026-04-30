@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { AuthService } from '@/data/repositories/AuthService';
 import { apiClient } from '@/data/api/apiClient';
 import Toast from 'react-native-toast-message';
+import { apiUrl } from '@/data/api/api';
 
 interface User {
     fullName: string;
@@ -26,9 +27,11 @@ export function AuthScreen() {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     useEffect(() => {
+        console.log('Current apiUrl:', apiUrl);
         const fetchUsers = async () => {
             try {
                 const response = await apiClient.get<User[]>('/User');
+                console.log('Current apiUrl:', apiUrl);
                 setUsers(response.data);
             } catch (error) {
                 console.error('Ошибка при загрузке пользователей:', error);
@@ -103,11 +106,6 @@ export function AuthScreen() {
                                         <Text style={styles.userPhone}>
                                             {user.phoneNumber}
                                         </Text>
-                                    </View>
-
-                                    {/* Кастомный радиобаттон для визуального выделения */}
-                                    <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
-                                        {isSelected && <View style={styles.radioInner} />}
                                     </View>
                                 </TouchableOpacity>
                             );
@@ -204,15 +202,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginLeft: 16,
     },
-    radioCircleSelected: {
-        borderColor: '#FFDD2D',
-    },
-    radioInner: {
-        height: 10,
-        width: 10,
-        borderRadius: 5,
-        backgroundColor: '#FFDD2D',
-    },
+
     footer: {
         paddingVertical: 16,
         backgroundColor: '#000', // Чтобы скрыть прокрутку под кнопкой
